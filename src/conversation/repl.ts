@@ -17,6 +17,7 @@ import {
   formatStatus,
   formatAgentResult,
   formatCompanyProfile,
+  formatAnalysisReportMarkdown,
 } from "./message-formatter.js";
 import { logger } from "../utils/logger.js";
 
@@ -186,6 +187,47 @@ export class SignalREPL {
           );
         } catch {
           console.log("\n  Failed to record feedback.\n");
+        }
+        break;
+      }
+
+      case "/analyze": {
+        const topic = parts.slice(1).join(" ");
+        const query = topic
+          ? `Analyze buying signals related to: ${topic}. Search relevant sources, classify signals, cross-reference with memory, and provide a comprehensive analysis.`
+          : `Perform a full buying signal scan. Search all available sources for procurement, supply chain, and logistics buying signals. Classify, cross-reference with memory, and provide a comprehensive analysis with key findings.`;
+
+        console.log(
+          `\n  Running analysis${topic ? ` for "${topic}"` : ""}...\n`
+        );
+
+        try {
+          const result = await this.orchestrator.chat(query);
+
+          // Show summary in console
+          console.log(formatAgentResult(result));
+
+          // Generate markdown report
+          const markdown = formatAnalysisReportMarkdown(
+            result,
+            topic || "Full buying signal scan"
+          );
+
+          // Save to output/reports/
+          const { mkdirSync, writeFileSync } = await import("fs");
+          const reportsDir = "./output/reports";
+          mkdirSync(reportsDir, { recursive: true });
+          const timestamp = new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-");
+          const filename = `${reportsDir}/analysis_${timestamp}.md`;
+          writeFileSync(filename, markdown, "utf-8");
+
+          console.log(`\n  Report saved to: ${filename}\n`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          logger.error(`Analysis error: ${msg}`);
+          console.log(`\n  Analysis failed: ${msg}\n`);
         }
         break;
       }

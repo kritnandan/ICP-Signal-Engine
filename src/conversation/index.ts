@@ -4,6 +4,7 @@ export {
   formatSignalTable,
   formatCompanyProfile,
   formatAgentResult,
+  formatAnalysisReportMarkdown,
   formatWelcome,
   formatHelp,
   formatStatus,
