@@ -12,6 +12,7 @@ A complete walkthrough for setting up, configuring, running, and extending the s
 4. [Configuration](#4-configuration)
    - 4.1 [Environment Variables (.env)](#41-environment-variables-env)
    - 4.2 [ICP Profile (config/icp.json)](#42-icp-profile-configicpjson)
+   - 4.3 [Agent Mode Configuration](#43-agent-mode-configuration)
 5. [Understanding the Architecture](#5-understanding-the-architecture)
 6. [Running the System](#6-running-the-system)
    - 6.1 [One-Time Pipeline Run](#61-one-time-pipeline-run)
@@ -34,11 +35,22 @@ A complete walkthrough for setting up, configuring, running, and extending the s
    - 9.2 [Step 2 — ICP Match](#92-step-2--icp-match)
    - 9.3 [Step 3 — Signal Classification](#93-step-3--signal-classification)
    - 9.4 [Step 4 — Output](#94-step-4--output)
-10. [Customizing the ICP Profile](#10-customizing-the-icp-profile)
-11. [Integrating with Downstream Systems](#11-integrating-with-downstream-systems)
-12. [Running Tests](#12-running-tests)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Extending the System](#14-extending-the-system)
+10. [Agentic AI Mode](#10-agentic-ai-mode)
+    - 10.1 [Overview — What Changed](#101-overview--what-changed)
+    - 10.2 [Interactive Chat Mode](#102-interactive-chat-mode)
+    - 10.3 [One-Shot Ask Mode](#103-one-shot-ask-mode)
+    - 10.4 [Slash Commands](#104-slash-commands)
+    - 10.5 [How the Agents Work](#105-how-the-agents-work)
+    - 10.6 [Persistent Memory System](#106-persistent-memory-system)
+    - 10.7 [Human-in-the-Loop Feedback](#107-human-in-the-loop-feedback)
+    - 10.8 [Reflection & Self-Correction](#108-reflection--self-correction)
+    - 10.9 [Agent-Mode Scheduling](#109-agent-mode-scheduling)
+11. [Guided Setup Wizard](#11-guided-setup-wizard)
+12. [Customizing the ICP Profile](#12-customizing-the-icp-profile)
+13. [Integrating with Downstream Systems](#13-integrating-with-downstream-systems)
+14. [Running Tests](#14-running-tests)
+15. [Troubleshooting](#15-troubleshooting)
+16. [Extending the System](#16-extending-the-system)
 
 ---
 
@@ -99,12 +111,19 @@ npm test
 
 Expected output:
 ```
+ ✓ tests/conversation/message-formatter.test.ts (9 tests)
  ✓ tests/signal-classifier.test.ts (4 tests)
+ ✓ tests/tools/tool-registry.test.ts (7 tests)
  ✓ tests/icp-matcher.test.ts (6 tests)
  ✓ tests/output-writer.test.ts (4 tests)
+ ✓ tests/memory/memory-store.test.ts (8 tests)
+ ✓ tests/tools/collector-tools.test.ts (5 tests)
+ ✓ tests/agents/base-agent.test.ts (4 tests)
+ ✓ tests/memory/company-memory.test.ts (8 tests)
+ ✓ tests/agents/orchestrator.test.ts (6 tests)
 
- Test Files  3 passed (3)
-      Tests  14 passed (14)
+ Test Files  10 passed (10)
+      Tests  61 passed (61)
 ```
 
 ---
@@ -192,7 +211,30 @@ This file defines your **Ideal Customer Profile** — the criteria used to score
 }
 ```
 
-See [Section 10](#10-customizing-the-icp-profile) for a detailed customization guide.
+See [Section 12](#12-customizing-the-icp-profile) for a detailed customization guide.
+
+### 4.3 Agent Mode Configuration
+
+These environment variables control the agentic AI system. All have sensible defaults — you only need to set `AGENT_MODE=true` to enable it:
+
+```bash
+# ── AGENT MODE ──────────────────────────────────
+AGENT_MODE=true                       # Enable agentic AI mode (default: false)
+AGENT_MODEL=claude-sonnet-4-6         # Model for agent reasoning (default: claude-sonnet-4-6)
+MAX_AGENT_ITERATIONS=15               # Max ReAct loop iterations per agent call (default: 15)
+ENABLE_REFLECTION=true                # Enable reflection/self-correction pass (default: true)
+ENABLE_MEMORY=true                    # Enable persistent memory system (default: true)
+MEMORY_DIR=./data/memory              # Directory for persistent JSON stores (default: ./data/memory)
+```
+
+| Setting | Default | What It Controls |
+|---------|---------|-----------------|
+| `AGENT_MODE` | `false` | Enables agent-mode scheduling and unlocks `chat`/`ask` commands |
+| `AGENT_MODEL` | `claude-sonnet-4-6` | Which Claude model agents use for reasoning and tool selection |
+| `MAX_AGENT_ITERATIONS` | `15` | Safety limit on ReAct loop iterations to prevent runaway API costs |
+| `ENABLE_REFLECTION` | `true` | Whether the Analysis Agent runs a self-correction pass on results |
+| `ENABLE_MEMORY` | `true` | Whether signals are persisted in the memory system across runs |
+| `MEMORY_DIR` | `./data/memory` | Where company knowledge, signal history, and preferences are stored |
 
 ---
 
@@ -626,7 +668,265 @@ All events are validated against a **Zod schema** before writing. Invalid events
 
 ---
 
-## 10. Customizing the ICP Profile
+## 10. Agentic AI Mode
+
+### 10.1 Overview — What Changed
+
+The system now has two modes:
+
+| Mode | Commands | How It Works |
+|------|----------|-------------|
+| **Legacy Pipeline** | `pipeline`, `collect`, `classify`, `schedule` | Fixed scripted flow: collect → match → classify → output. No AI decisions. |
+| **Agentic AI** | `chat`, `ask`, `setup` | Multi-agent system with autonomous reasoning, tool use, persistent memory, and natural language interface. |
+
+**Architecture comparison:**
+
+```
+LEGACY (scripted pipeline):
+  Collect → Match → Classify → Output   (fixed, no AI decisions)
+
+AGENTIC (multi-agent system):
+  User (natural language)
+    → Orchestrator Agent (plans, delegates, replans)
+      → Research Agent (chooses sources, adapts queries)
+      → Analysis Agent (classifies, cross-references, self-critiques)
+      → Memory Agent (persistent knowledge, deduplication, feedback)
+    → Enriched Output (JSON + natural language summaries)
+```
+
+All existing commands still work exactly as before. The agentic system is additive.
+
+### 10.2 Interactive Chat Mode
+
+Start a conversational session with the AI:
+
+```bash
+npm run chat
+```
+
+This opens an interactive REPL where you can ask questions in natural language:
+
+```
+  ICP Buying Signal Monitor — Agentic Mode
+  Powered by Claude AI
+
+  Ask me anything about buying signals in procurement,
+  supply chain, and logistics. Examples:
+
+  > "Find TMS signals from manufacturing companies"
+  > "What do we know about Acme Corp?"
+  > "Show me strong signals from the last week"
+  > "Analyze buying signals on Reddit"
+
+  Commands: /help /status /companies /history /export /quit
+
+> Find strong procurement signals from the last week
+
+  Thinking...
+
+  ## Signal Analysis Summary
+
+  Found **7 buying signals** from **4 companies**.
+
+  ### Strong Signals (3)
+  - **MegaCorp** [procurement_sourcing] — Active RFP for source-to-pay platform
+  - **GlobalMfg** [s2p_transformation] — Evaluating Coupa vs Ariba
+  - **TechRetail** [procurement_sourcing] — VP Procurement posted about vendor selection
+
+  [orchestrator | 8 steps | 2,450 tokens | 4.2s]
+```
+
+The Orchestrator Agent autonomously decides which sources to search, how to classify results, and how to present findings. It maintains conversation context across messages — you can ask follow-up questions.
+
+### 10.3 One-Shot Ask Mode
+
+For quick, non-interactive queries:
+
+```bash
+npm run ask -- "Show me strong signals from manufacturing"
+```
+
+This runs a single query through the orchestrator and exits. Useful for scripts, cron jobs, or quick lookups.
+
+### 10.4 Slash Commands
+
+Inside the chat REPL, these slash commands are available:
+
+| Command | What It Does |
+|---------|-------------|
+| `/help` | Show all available commands |
+| `/status` | Show system status: API calls, token usage, tracked companies, signal count |
+| `/companies` | List all tracked companies with signal counts and buying stages |
+| `/history` | Show recent signal history across all sources |
+| `/feedback <eventId> <relevant\|irrelevant>` | Record feedback on a signal to improve future analysis |
+| `/export` | Export the current conversation to a JSON file |
+| `/clear` | Clear conversation context (start fresh) |
+| `/quit` | Exit the REPL |
+
+**Example: Providing feedback**
+```
+> /feedback evt_m5abc_1a2b3c relevant Great signal, we're already in talks with them.
+
+  Feedback recorded: evt_m5abc_1a2b3c = relevant
+```
+
+### 10.5 How the Agents Work
+
+The system uses four specialized agents, each with a distinct role:
+
+#### Orchestrator Agent
+- **Role:** Central brain. Receives user requests, plans which tools/agents to use, delegates work, synthesizes results.
+- **Tools:** All collector, analysis, output, and memory tools + delegation to sub-agents.
+- **When it delegates:** Complex multi-step tasks (e.g., "Find and analyze all signals from last week") get delegated. Simple lookups are handled directly.
+
+#### Research Agent
+- **Role:** Data collection specialist. Chooses the most relevant sources, crafts effective search queries, adapts strategy based on initial results.
+- **Tools:** All collector tools (search_linkedin, search_twitter, search_reddit, search_github, search_rss, search_hackernews).
+- **Strategy:** For company searches → LinkedIn + Twitter first. For category searches → Reddit + HN + RSS. Broadens queries if initial results are thin.
+
+#### Analysis Agent
+- **Role:** Deep classification and cross-referencing. Runs ICP matching, signal classification, cross-references signals across sources, and performs reflection.
+- **Tools:** match_icp_profile, classify_signal, classify_batch, cross_reference_signals, reflect_on_quality, plus memory tools.
+- **Two-pass analysis:** Classify first, then run `reflect_on_quality` to catch false positives and adjust confidence scores.
+
+#### Memory Agent
+- **Role:** Persistent knowledge management. Answers "what do we know about X?", tracks trends, manages user preferences and feedback.
+- **Tools:** read_company_memory, write_company_memory, query_signal_history, read_user_preferences, update_user_preferences, record_feedback.
+
+**ReAct Loop:** Each agent uses the Anthropic tool-use API in a loop:
+
+```
+User message → Model responds with thought + tool_use →
+Execute tool → Return tool_result → Model responds with thought + tool_use →
+... → Model responds with final text (no more tools) → Done
+```
+
+This allows agents to reason about what to do, take actions, observe results, and adapt — rather than following a fixed script.
+
+### 10.6 Persistent Memory System
+
+The memory system stores knowledge in `data/memory/` as JSON files that persist across runs:
+
+| File | What It Stores |
+|------|---------------|
+| `companies.json` | Accumulated knowledge per company: signal count, categories, buying stage progression, notes, aliases |
+| `signals.json` | Signal history with deduplication hashes. Used for trend detection and avoiding re-processing. |
+| `preferences.json` | User preferences learned from interactions: focus industries, companies, confidence thresholds, output format |
+| `feedback.json` | User feedback on signals (relevant/irrelevant/partially_relevant) for calibration |
+
+**Company knowledge accumulates over time:**
+
+```
+Run 1: Detect "AcmeCorp" posting about TMS evaluation → Create company record
+Run 2: Detect "AcmeCorp" RFP on Reddit → Update: signal count +1, stage → evaluation
+Run 3: Detect "Acme Corporation" (alias) job posting → Link alias, update categories
+Chat:  "What do we know about Acme?" → Full history with buying stage progression
+```
+
+**Deduplication:** The signal history hashes content to prevent the same signal from being recorded twice, even if it's found across different runs or sources.
+
+**Trend detection:** The system tracks signal counts per category over time windows and can report which categories are trending up or down.
+
+### 10.7 Human-in-the-Loop Feedback
+
+The feedback system lets you tell the AI which signals are relevant:
+
+```
+> /feedback evt_abc123 relevant
+
+> /feedback evt_def456 irrelevant Too generic, just a news article
+```
+
+Feedback is stored in `data/memory/feedback.json` and can be used by the Analysis Agent to calibrate future confidence scores. Over time, the system learns which types of signals matter to you.
+
+### 10.8 Reflection & Self-Correction
+
+When `ENABLE_REFLECTION=true` (the default), the Analysis Agent performs a two-pass analysis:
+
+**Pass 1 — Classification:**
+Standard signal classification using Claude AI.
+
+**Pass 2 — Reflection:**
+The agent calls `reflect_on_quality` which reviews all classified signals and checks for:
+
+| Check | What It Catches | Adjustment |
+|-------|----------------|------------|
+| Generic content | Sharing/commentary mistaken for buying signals | Confidence reduced by up to 0.2 |
+| Very short content | Insufficient evidence for high confidence | Confidence capped at 0.5 |
+| Under-rated strong signals | RFP/RFQ/vendor selection language with low confidence | Confidence increased to at least 0.7 |
+
+This prevents false positives from inflating your signal count and ensures genuinely strong signals aren't buried.
+
+### 10.9 Agent-Mode Scheduling
+
+The scheduler supports both modes:
+
+```bash
+# Legacy mode (default)
+npm run schedule
+
+# Agent mode — set in .env
+AGENT_MODE=true
+npm run schedule
+```
+
+In agent mode, each scheduled run asks the Orchestrator Agent to:
+1. Scan all enabled sources
+2. Classify and cross-reference findings
+3. Record results in persistent memory
+4. Generate a summary
+
+This is more adaptive than the fixed pipeline — the agent can dig deeper into promising leads, skip sources that have been producing noise, and leverage historical knowledge.
+
+---
+
+## 11. Guided Setup Wizard
+
+First-time users can run the setup wizard instead of manually editing `.env`:
+
+```bash
+npm run setup
+```
+
+The wizard walks through each step conversationally:
+
+```
+  Welcome to the ICP Buying Signal Monitor Setup!
+
+  I'll help you configure the system step by step.
+
+  Step 1: Anthropic API Key (required for AI classification)
+  Enter your Anthropic API key: sk-ant-...
+
+  Step 2: Data Sources (configure at least one)
+  Enable Twitter/X? (y/N): y
+  Twitter Bearer Token: ...
+  Search keywords (comma-separated): supply chain, procurement, TMS
+
+  Enable Reddit? (y/N): y
+  Reddit Client ID: ...
+  ...
+
+  Step 3: Agent Mode
+  Enable agent mode? (Y/n): y
+
+  Step 4: Output Settings
+  Output directory (default: ./output):
+  Signal confidence threshold 0-1 (default: 0.6):
+
+  Step 5: ICP (Ideal Customer Profile)
+  Configure custom ICP? (y/N — N uses default): n
+
+  Setup complete! Run 'npm run chat' to start.
+```
+
+The wizard generates a valid `.env` file and optionally a custom `config/icp.json`. No manual file editing required.
+
+If the `chat` command detects that `.env` doesn't exist, it automatically launches the wizard.
+
+---
+
+## 12. Customizing the ICP Profile
 
 Edit `config/icp.json` to match your ideal customer:
 
@@ -687,7 +987,7 @@ Edit `config/icp.json` to match your ideal customer:
 
 ---
 
-## 11. Integrating with Downstream Systems
+## 13. Integrating with Downstream Systems
 
 ### Read the JSONL batch file
 
@@ -741,7 +1041,7 @@ inotifywait -m output/events/ -e create |
 
 ---
 
-## 12. Running Tests
+## 14. Running Tests
 
 ```bash
 # Run all tests
@@ -758,10 +1058,17 @@ npm run test:watch
 | `icp-matcher.test.ts` | 6 | Role matching, tech stack detection, custom rules, content relevance scoring, exclusion logic |
 | `signal-classifier.test.ts` | 4 | Event structure, schema validation, confidence bounds |
 | `output-writer.test.ts` | 4 | Individual file writing, batch JSONL writing, latest.json summary generation |
+| `agents/base-agent.test.ts` | 4 | ReAct loop with mocked Anthropic API, tool execution, error handling, iteration limits |
+| `agents/orchestrator.test.ts` | 6 | Planning, delegation, conversation context, one-shot mode, cost tracking |
+| `tools/tool-registry.test.ts` | 7 | Registration, role filtering, execution, overwrite behavior |
+| `tools/collector-tools.test.ts` | 5 | Collector wrapping, source filtering, keyword filtering, disabled collectors |
+| `memory/memory-store.test.ts` | 8 | CRUD operations, persistence, queries with sort/limit/offset |
+| `memory/company-memory.test.ts` | 8 | Knowledge accumulation, buying stage tracking, aliases, case-insensitive lookup |
+| `conversation/message-formatter.test.ts` | 9 | Signal formatting, table grouping, company profiles, welcome/help/status output |
 
 ---
 
-## 13. Troubleshooting
+## 15. Troubleshooting
 
 ### "Skipped – no access token configured"
 
@@ -786,6 +1093,25 @@ A collector is disabled because its API key isn't set in `.env`. This is normal 
 - Increase `CRON_SCHEDULE` interval
 - The classifier uses batching with concurrency of 5 by default
 
+### Chat mode says "First-time setup detected"
+
+This happens when `.env` doesn't exist. Either run `npm run setup` to use the wizard, or manually create `.env` from `.env.example`.
+
+### Agent takes too many iterations
+
+Reduce `MAX_AGENT_ITERATIONS` in `.env` (default 15). If the agent is looping on tool calls, check that your API keys are valid and collectors are returning data.
+
+### Memory files are empty
+
+Memory only gets populated when you use agent mode (`npm run chat` or `npm run ask`). The legacy pipeline does not write to the memory system. Also check that `ENABLE_MEMORY=true` (default).
+
+### High token usage
+
+- Use `claude-haiku-4-5-20251001` as `AGENT_MODEL` for cheaper runs
+- Reduce `MAX_AGENT_ITERATIONS` to limit reasoning depth
+- Set `ENABLE_REFLECTION=false` to skip the second analysis pass
+- Use `/status` in chat mode to monitor token usage in real-time
+
 ### TypeScript build errors
 
 ```bash
@@ -798,7 +1124,7 @@ npm run build
 
 ---
 
-## 14. Extending the System
+## 16. Extending the System
 
 ### Add a new collector
 
@@ -847,23 +1173,50 @@ private model = "claude-opus-4-6";            // Most capable
 
 ---
 
+Now add an agent tool as well — register it in the tool registry and make it available to specific agent roles.
+
+---
+
 ## Quick Reference
+
+### Commands
 
 | Command | What It Does |
 |---------|--------------|
-| `npm run pipeline` | Full run: collect → match → classify → output |
-| `npm run schedule` | Start cron scheduler |
+| `npm run chat` | **Interactive conversational mode (primary)** |
+| `npm run ask -- "question"` | **One-shot agentic query** |
+| `npm run setup` | **Guided first-time setup wizard** |
+| `npm run pipeline` | Legacy full run: collect → match → classify → output |
+| `npm run schedule` | Start cron scheduler (supports agent mode via `AGENT_MODE=true`) |
 | `npm run collect` | Run collectors only |
 | `npm run classify -- "text"` | Classify a single snippet |
-| `npm test` | Run all tests |
+| `npm test` | Run all tests (61 tests across 10 files) |
 | `npm run build` | TypeScript build |
-| `npm run dev` | Run CLI in dev mode |
+
+### REPL Slash Commands
+
+| Command | What It Does |
+|---------|-------------|
+| `/help` | Show available commands |
+| `/status` | System status and token usage |
+| `/companies` | List tracked companies |
+| `/history` | Recent signal history |
+| `/feedback <id> <rating>` | Record signal feedback |
+| `/export` | Export conversation to JSON |
+| `/clear` | Clear conversation context |
+| `/quit` | Exit |
+
+### Key Files
 
 | File | Purpose |
 |------|---------|
-| `.env` | API keys and pipeline settings |
+| `.env` | API keys, pipeline settings, agent config |
 | `config/icp.json` | Your Ideal Customer Profile |
 | `output/latest.json` | Latest run summary |
 | `output/events/*.json` | Individual signal events |
 | `output/runs/*.jsonl` | Batch output per run |
 | `output/pipeline.log` | Application logs |
+| `data/memory/companies.json` | Persistent company knowledge |
+| `data/memory/signals.json` | Signal history and deduplication |
+| `data/memory/preferences.json` | Learned user preferences |
+| `data/memory/feedback.json` | User feedback on signals |
