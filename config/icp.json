@@ -1,0 +1,78 @@
+{
+  "name": "Supply Chain & Procurement ICP",
+  "industries": [
+    "Manufacturing",
+    "Retail",
+    "Consumer Goods",
+    "Food & Beverage",
+    "Automotive",
+    "Aerospace & Defense",
+    "Pharmaceuticals",
+    "Healthcare",
+    "Technology",
+    "Logistics & Transportation",
+    "Energy",
+    "Chemicals",
+    "Industrial Equipment"
+  ],
+  "minEmployees": 500,
+  "maxEmployees": 500000,
+  "minRevenue": 100,
+  "geographies": [
+    "United States",
+    "Canada",
+    "United Kingdom",
+    "Germany",
+    "France",
+    "Netherlands",
+    "Australia",
+    "Singapore",
+    "Japan"
+  ],
+  "techStack": [
+    "SAP",
+    "Oracle",
+    "Microsoft Dynamics",
+    "Coupa",
+    "Ariba",
+    "Jaggaer",
+    "Blue Yonder",
+    "Kinaxis",
+    "o9 Solutions",
+    "Manhattan Associates",
+    "Körber",
+    "Descartes",
+    "project44",
+    "FourKites",
+    "Snowflake",
+    "Databricks"
+  ],
+  "targetRoles": [
+    "VP Supply Chain",
+    "VP Procurement",
+    "VP Logistics",
+    "VP Operations",
+    "Chief Supply Chain Officer",
+    "Chief Procurement Officer",
+    "Director of Procurement",
+    "Director of Supply Chain",
+    "Director of Logistics",
+    "Director of Operations",
+    "Head of Sourcing",
+    "Head of Procurement",
+    "Head of Supply Chain",
+    "Supply Chain Manager",
+    "Procurement Manager",
+    "Logistics Manager",
+    "S2P Program Manager",
+    "Digital Transformation Lead"
+  ],
+  "excludeCompanies": [],
+  "customRules": [
+    {
+      "field": "body",
+      "operator": "regex",
+      "value": "(RFP|RFQ|RFI|vendor selection|platform evaluation|system implementation|digital transformation|overhaul|moderniz|re-platform)"
+    }
+  ]
+}

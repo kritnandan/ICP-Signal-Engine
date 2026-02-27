@@ -1,0 +1,41 @@
+{
+  "name": "icp-buying-signal-monitor",
+  "version": "1.0.0",
+  "description": "Watches online sources for procurement, supply chain, and logistics buying signals from ICP accounts",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "watch": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src/",
+    "collect": "tsx src/cli.ts collect",
+    "classify": "tsx src/cli.ts classify",
+    "pipeline": "tsx src/cli.ts pipeline",
+    "schedule": "tsx src/cli.ts schedule",
+    "chat": "tsx src/cli.ts chat",
+    "ask": "tsx src/cli.ts ask",
+    "setup": "tsx src/cli.ts setup"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "axios": "^1.7.9",
+    "cheerio": "^1.0.0",
+    "commander": "^13.1.0",
+    "cron": "^3.5.0",
+    "dotenv": "^16.5.0",
+    "rss-parser": "^3.13.0",
+    "winston": "^3.17.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "eslint": "^9.21.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
