@@ -362,52 +362,97 @@ The AI will analyze it and return:
 
 ---
 
-## 8. Using This with Claude Code (Recommended)
+## 8. Using This with Claude Code — Slash Commands
 
-This application is designed to work natively with **Claude Code** — the AI-powered CLI assistant. You can control the entire application by talking to Claude Code naturally.
+This application is designed to work natively with **Claude Code**. The entire pipeline — from collecting signals to exporting your Excel report — can be controlled with a single `/` command. No terminal, no npm commands, no manual steps.
 
-### Setup in Claude Code
+### 8.1 Your Morning Routine (One Command)
 
-Just open this project folder in Claude Code. Claude Code can read all the code and understand the full system.
+Open Claude Code in this project folder and type:
 
-### Example Claude Code Conversations
+```
+/morning-leads
+```
+
+That's it. Claude Code will:
+1. Run the full pipeline to collect fresh signals
+2. Read and summarize all results
+3. Export to an Excel file
+4. Tell you exactly which companies to contact today and why
+
+This is the only command you need every morning.
+
+---
+
+### 8.2 All Available Slash Commands
+
+These commands are built into this project. Type any of them in Claude Code while inside the `d:\ICP-Signal-Engine` folder:
+
+| Command | What It Does |
+|---|---|
+| `/morning-leads` | **Full morning briefing** — run pipeline, show top leads, export Excel |
+| `/get-leads` | Run the full pipeline and show all signals found |
+| `/check-leads` | Show leads from the last run instantly (no re-run) |
+| `/collect` | Collect raw signals only, without AI classification |
+| `/export` | Export current signals to Excel |
+| `/dashboard` | Show signal stats and trends |
+| `/analyze-leads` | Deep analysis — buying stage, outreach recommendation per company |
+| `/schedule` | Start the automated cron scheduler |
+| `/icp-chat` | Open the interactive AI agent chat |
+| `/setup-icp` | Run the configuration wizard (API keys + ICP profile) |
+| `/check-config` | Show which API keys are set and which are missing |
+| `/test` | Run the full test suite (61 tests) |
+
+#### How Slash Commands Work
+
+Each `/command` is a pre-written prompt stored as a markdown file in `.claude/commands/`. When you type `/morning-leads`, Claude Code reads that file and executes the instructions automatically — running the pipeline, reading files, and giving you a formatted response. Nothing is hardcoded; you can edit any command file to change its behavior.
+
+**Command files live here:**
+```
+.claude/commands/
++-- morning-leads.md   <- Type /morning-leads
++-- get-leads.md       <- Type /get-leads
++-- check-leads.md     <- Type /check-leads
++-- collect.md         <- Type /collect
++-- export.md          <- Type /export
++-- dashboard.md       <- Type /dashboard
++-- analyze-leads.md   <- Type /analyze-leads
++-- schedule.md        <- Type /schedule
++-- icp-chat.md        <- Type /icp-chat
++-- setup-icp.md       <- Type /setup-icp
++-- check-config.md    <- Type /check-config
++-- test.md            <- Type /test
+```
+
+#### Global Commands (Available Everywhere)
+
+Three commands are also registered globally (`~/.claude/commands/`) so you can use them from **any** Claude Code session, not just this project folder:
+
+| Global Command | What It Does |
+|---|---|
+| `/morning-leads` | Same morning briefing (always points to this project) |
+| `/get-leads` | Run pipeline from anywhere |
+| `/check-leads` | Check last results from anywhere |
+
+---
+
+### 8.3 Natural Language (No Slash Commands)
+
+You can also just describe what you want in plain English — no slash command needed:
 
 ```
 "Run the pipeline and show me the results"
-  -> Claude Code runs: npm run pipeline
-
-"Start the chat interface so I can query signals"
-  -> Claude Code runs: npm run chat
-
-"Export the latest results to Excel"
-  -> Claude Code runs: npm run export
-
-"Show me all the companies tracked in memory"
-  -> Claude Code reads data/memory/companies.json
-
+"Which companies are showing strong TMS buying signals?"
 "Change my ICP to focus on companies with 1000+ employees"
-  -> Claude Code edits config/icp.json
-
 "Add healthcare to my target industries"
-  -> Claude Code edits config/icp.json
-
-"Enable Reddit monitoring with subreddits: supplychain, logistics"
-  -> Claude Code edits .env file
-
-"Generate a dashboard report"
-  -> Claude Code runs: npm run dashboard
-
-"Run a full analysis and save a report"
-  -> Claude Code runs: npm run ask "Analyze all signals..."
+"Export the latest results to Excel"
+"Show me all companies tracked in memory"
+"Why is this pipeline finding 0 results?"
 ```
 
-### Running Commands Through Claude Code
-
-Claude Code can run any npm script directly. Just describe what you want:
-
-| What you say | What runs |
+| What you say | What Claude does |
 |---|---|
-| "Run the full pipeline" | `npm run pipeline` |
+| "Run the full pipeline" | `npm run pipeline` + shows results |
 | "Start chat mode" | `npm run chat` |
 | "Schedule automatic runs" | `npm run schedule` |
 | "Export to Excel" | `npm run export` |
@@ -728,6 +773,22 @@ ICP-Signal-Engine/
 +-- config/
 |   +-- icp.json            <- YOUR IDEAL CUSTOMER PROFILE
 |
++-- .claude/                <- Claude Code integration
+|   +-- commands/           <- Slash command definitions (type / to use)
+|   |   +-- morning-leads.md    <- /morning-leads
+|   |   +-- get-leads.md        <- /get-leads
+|   |   +-- check-leads.md      <- /check-leads
+|   |   +-- collect.md          <- /collect
+|   |   +-- export.md           <- /export
+|   |   +-- dashboard.md        <- /dashboard
+|   |   +-- analyze-leads.md    <- /analyze-leads
+|   |   +-- schedule.md         <- /schedule
+|   |   +-- icp-chat.md         <- /icp-chat
+|   |   +-- setup-icp.md        <- /setup-icp
+|   |   +-- check-config.md     <- /check-config
+|   |   +-- test.md             <- /test
+|   +-- settings.local.json <- Auto-approved bash command permissions
+|
 +-- src/                    <- Application source code
 |   +-- cli.ts              <- Command-line interface (all npm run commands)
 |   +-- config.ts           <- Reads your .env settings
@@ -887,14 +948,33 @@ Set `LOG_LEVEL=debug` in `.env` for detailed step-by-step logging.
 
 ## Quick Reference Card
 
+### Slash Commands (Recommended — Type in Claude Code)
+
+```
+/morning-leads      # Morning briefing: run pipeline + top leads + Excel export
+/get-leads          # Run full pipeline, show all signals
+/check-leads        # Show last run results instantly
+/collect            # Collect raw signals only
+/export             # Export to Excel
+/dashboard          # Signal stats & trends
+/analyze-leads      # Deep analysis + outreach recommendations
+/schedule           # Start automated cron scheduler
+/icp-chat           # Interactive AI agent
+/setup-icp          # Configuration wizard
+/check-config       # API key status check
+/test               # Run 61 tests
+```
+
+### npm Commands (Terminal / Manual)
+
 ```bash
 # First time setup
 npm install
 npm run setup
 
 # Most useful commands
-npm run chat          # Interactive AI assistant (recommended)
 npm run pipeline      # Run full scan once
+npm run chat          # Interactive AI assistant
 npm run schedule      # Auto-scan every 4 hours
 npm run export        # Save results to Excel
 npm run dashboard     # Generate daily summary report
@@ -908,8 +988,9 @@ npm run ask "What companies are evaluating TMS?"
 npm run classify "We are issuing an RFP for warehouse management"
 
 # Development
-npm test              # Run tests
+npm test              # Run all 61 tests
 npm run build         # Compile TypeScript
+npm run lint          # Check code quality
 ```
 
 ---
