@@ -3,7 +3,19 @@
     "allow": [
       "Bash(node --version)",
       "Bash(npm run collect)",
-      "Bash(npm test)"
+      "Bash(npm run pipeline)",
+      "Bash(npm run classify*)",
+      "Bash(npm run schedule)",
+      "Bash(npm run export)",
+      "Bash(npm run dashboard)",
+      "Bash(npm run chat)",
+      "Bash(npm run ask*)",
+      "Bash(npm run setup)",
+      "Bash(npm run build)",
+      "Bash(npm test)",
+      "Bash(npm run lint)",
+      "Bash(ls *)",
+      "Bash(mkdir -p *)"
     ]
   }
 }
