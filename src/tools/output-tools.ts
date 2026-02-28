@@ -157,7 +157,7 @@ export function registerOutputTools(
       lines.push(`### Strong Signals (${strongSignals.length})`);
       for (const sig of strongSignals.slice(0, 10)) {
         lines.push(
-          `- **${sig.company.companyName}** [${sig.signal.category}] — ${sig.signal.reasoning}`
+          `- **${sig.company?.companyName || "Unknown"}** [${sig.signal?.category || "Uncategorized"}] — ${sig.signal?.reasoning || "No reasoning provided"}`
         );
       }
     }
@@ -176,7 +176,7 @@ export function registerOutputTools(
       for (const event of events) {
         lines.push(``);
         lines.push(
-          `**${event.company.companyName}** (${event.source.platform})`
+          `**${event.company?.companyName || "Unknown"}** (${event.source?.platform || "Unknown"})`
         );
         lines.push(
           `  Category: ${event.signal.category} | Strength: ${event.signal.strength} | Confidence: ${event.signal.confidence}`
@@ -206,13 +206,13 @@ export function registerOutputTools(
           : "[!]";
 
     const lines = [
-      `${strengthIcon} ${event.company.companyName} — ${event.signal.category}`,
-      `  Source: ${event.source.platform} | Confidence: ${(event.signal.confidence * 100).toFixed(0)}%`,
-      `  Stage: ${event.signal.buyingStage} | Score: ${(event.company.matchScore * 100).toFixed(0)}%`,
-      `  ${event.signal.reasoning}`,
+      `${strengthIcon} ${event.company?.companyName || "Unknown"} — ${event.signal?.category || "Uncategorized"}`,
+      `  Source: ${event.source?.platform || "Unknown"} | Confidence: ${((event.signal?.confidence || 0) * 100).toFixed(0)}%`,
+      `  Stage: ${event.signal?.buyingStage || "Unknown"} | Score: ${((event.company?.matchScore || 0) * 100).toFixed(0)}%`,
+      `  ${event.signal?.reasoning || "No reasoning provided"}`,
     ];
 
-    if (event.rawContent.title) {
+    if (event.rawContent?.title) {
       lines.push(`  Title: ${event.rawContent.title}`);
     }
 

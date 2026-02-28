@@ -1,126 +1,91 @@
-import axios from "axios";
-import type { LinkedInConfig, RawEvent, LinkedInContentType } from "../types.js";
+import { ApifyClient } from "apify-client";
+import type { LinkedInConfig, RawEvent, AppConfig } from "../types.js";
 import { BaseCollector } from "./base.js";
 import { generateEventId } from "../utils/id.js";
 
 /**
- * LinkedIn collector.
+ * LinkedIn collector powered by Apify.
  *
- * Uses the LinkedIn Marketing/Community Management API to fetch company posts
- * and the Jobs API for listings. Requires a valid access token with appropriate
- * scopes. If the token is missing, the collector returns an empty array.
- *
- * Extend or replace the API calls with a third-party scraping service
- * (e.g., RapidAPI LinkedIn scraper) if needed.
+ * Scrapes LinkedIn public data safely using Apify actors instead of
+ * the official blocked API.
  */
 export class LinkedInCollector extends BaseCollector {
   name = "linkedin" as const;
 
   private config: LinkedInConfig;
-  private baseUrl = "https://api.linkedin.com/v2";
+  private apifyToken: string;
+  private apifyClient: ApifyClient | null = null;
 
-  constructor(config: LinkedInConfig) {
+  constructor(config: AppConfig) {
     super();
-    this.config = config;
+    this.config = config.collectors.linkedin;
+    this.apifyToken = config.apifyApiToken;
+
+    if (this.apifyToken) {
+      this.apifyClient = new ApifyClient({ token: this.apifyToken });
+    }
   }
 
   async collect(): Promise<RawEvent[]> {
-    if (!this.config.enabled || !this.config.accessToken) {
-      this.log("Skipped – no access token configured");
+    if (!this.config.enabled || !this.apifyClient) {
+      this.log("Skipped – no Apify API token configured");
       return [];
     }
 
     const events: RawEvent[] = [];
+    const actorId = this.config.apifyActorId || "anchor/linkedin-profile-scraper";
 
     for (const companyId of this.config.companyIds) {
       try {
-        const posts = await this.fetchCompanyPosts(companyId);
-        events.push(...posts);
-      } catch (err) {
-        this.logError(`Failed to fetch posts for ${companyId}`, err);
-      }
+        this.log(`Running Apify Actor ${actorId} for company: ${companyId}...`);
 
-      try {
-        const jobs = await this.fetchJobListings(companyId);
-        events.push(...jobs);
+        // Prepare actor input 
+        const runInput = {
+          urls: [`https://www.linkedin.com/company/${companyId}/`],
+          deepScrape: true,
+          limit: 10
+        };
+
+        // Call Apify 
+        const run = await this.apifyClient.actor(actorId).call(runInput);
+        this.log(`Apify run finished: ${run.id}. Fetching dataset...`);
+
+        const { items } = await this.apifyClient.dataset(run.defaultDatasetId).listItems();
+
+        for (const item of items) {
+          events.push(this.mapApifyResult(item, companyId));
+        }
       } catch (err) {
-        this.logError(`Failed to fetch jobs for ${companyId}`, err);
+        this.logError(`Failed to fetch posts via Apify for ${companyId}`, err);
       }
     }
 
-    this.log(`Collected ${events.length} events`);
+    this.log(`Collected ${events.length} target events via Apify`);
     return events;
   }
 
-  private async fetchCompanyPosts(companyId: string): Promise<RawEvent[]> {
-    const res = await axios.get(
-      `${this.baseUrl}/ugcPosts?q=authors&authors=List(urn:li:organization:${companyId})&count=25`,
-      { headers: this.authHeaders() }
-    );
-
-    const elements = res.data?.elements ?? [];
-    return elements.map(
-      (post: Record<string, unknown>): RawEvent =>
-        this.mapPost(post, companyId, "company_post")
-    );
-  }
-
-  private async fetchJobListings(companyId: string): Promise<RawEvent[]> {
-    // LinkedIn Jobs API requires partner-level access. This is a placeholder
-    // that uses keyword search scoped to the company.
-    const keywordQuery = this.config.keywords.join(" OR ");
-    const res = await axios.get(
-      `${this.baseUrl}/jobSearch?q=companyId&companyId=${companyId}&keywords=${encodeURIComponent(keywordQuery)}&count=25`,
-      { headers: this.authHeaders() }
-    );
-
-    const elements = res.data?.elements ?? [];
-    return elements.map(
-      (job: Record<string, unknown>): RawEvent =>
-        this.mapPost(job, companyId, "job_listing")
-    );
-  }
-
-  private mapPost(
+  private mapApifyResult(
     data: Record<string, unknown>,
-    companyId: string,
-    contentType: LinkedInContentType
+    companyId: string
   ): RawEvent {
-    const specificContent = data.specificContent as
-      | Record<string, unknown>
-      | undefined;
-    const shareContent = specificContent?.[
-      "com.linkedin.ugc.ShareContent"
-    ] as Record<string, unknown> | undefined;
-    const commentary =
-      (shareContent?.shareCommentaryV2 as Record<string, unknown>)?.text ??
-      (data.title as string) ??
-      "";
+    // We map generic Apify scraping JSON to our pipeline RawEvent
+    const textContent = String(data.text || data.about || data.description || "");
+    const url = String(data.url || `https://www.linkedin.com/company/${companyId}`);
 
     return {
-      id: generateEventId("li"),
+      id: generateEventId("li_apify"),
       source: "linkedin",
-      contentType,
-      url: `https://www.linkedin.com/feed/update/${data.id ?? ""}`,
-      title: (data.title as string) ?? undefined,
-      body: this.truncate(String(commentary)),
-      author: (data.author as string) ?? undefined,
+      contentType: "company_post", // default generic classification
+      url: url,
+      title: data.title ? String(data.title) : undefined,
+      body: this.truncate(textContent),
+      author: data.authorName ? String(data.authorName) : undefined,
       companyHint: companyId,
       tags: this.config.keywords,
       collectedAt: this.nowISO(),
-      publishedAt: data.created
-        ? new Date(
-            (data.created as Record<string, number>).time
-          ).toISOString()
-        : undefined,
-      metadata: { companyId, raw: data },
-    };
-  }
-
-  private authHeaders() {
-    return {
-      Authorization: `Bearer ${this.config.accessToken}`,
-      "X-Restli-Protocol-Version": "2.0.0",
+      publishedAt: data.date ? new Date(String(data.date)).toISOString() : undefined,
+      metadata: { companyId, rawActorParams: data },
     };
   }
 }
+

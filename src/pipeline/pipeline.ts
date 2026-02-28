@@ -1,10 +1,12 @@
 import { writeFileSync, rmSync, mkdirSync } from "fs";
+import axios from "axios";
 import { join } from "path";
 import type {
   AppConfig,
   Collector,
   RawEvent,
   BuyingSignalEvent,
+  EnrichedSignalEvent,
 } from "../types.js";
 import { ICPMatcher } from "../engines/icp-matcher.js";
 import { SignalClassifier } from "../engines/signal-classifier.js";
@@ -112,7 +114,7 @@ export class Pipeline {
         signal.isSignal &&
         signal.confidence >= this.config.signalConfidenceThreshold
       ) {
-        const buyingEvent: BuyingSignalEvent = {
+        const buyingEvent: EnrichedSignalEvent = {
           eventId: event.id,
           timestamp: new Date().toISOString(),
           source: {
@@ -134,7 +136,43 @@ export class Pipeline {
             processedAt: new Date().toISOString(),
             pipelineVersion: PIPELINE_VERSION,
           },
+          enrichment: {}
         };
+
+        // ── Step 4.5: Apollo.io Enrichment ──
+        if (this.config.apolloApiKey && signal.confidence >= 0.7) {
+          try {
+            logger.info(`Enriching ${company.companyName} via Apollo.io...`);
+
+            // Very naive domain guess for the MVP: companyname.com
+            const domainGuess = company.companyName.toLowerCase().replace(/[^a-z0-9]/g, "") + ".com";
+
+            const apolloRes = await axios.post(
+              "https://api.apollo.io/api/v1/mixed_people/search",
+              {
+                api_key: this.config.apolloApiKey,
+                q_organization_domains: domainGuess,
+                person_titles: ["Supply Chain", "Logistics", "Operations", "Procurement"],
+                per_page: 3
+              },
+              { headers: { "Cache-Control": "no-cache", "Content-Type": "application/json" } }
+            );
+
+            const people = apolloRes.data?.people || [];
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            buyingEvent.enrichment.contacts = people.map((p: any) => ({
+              name: `${p.first_name || ""} ${p.last_name || ""}`.trim(),
+              title: p.title || "Unknown",
+              email: p.email || "Hidden on Free Tier",
+              linkedinUrl: p.linkedin_url
+            }));
+
+            logger.info(`Found ${people.length} contacts for ${company.companyName}`);
+          } catch (err) {
+            logger.error(`Apollo enrichment failed for ${company.companyName}: ${err instanceof Error ? err.message : String(err)}`);
+          }
+        }
 
         this.writer.writeEvent(buyingEvent);
         signalEvents.push(buyingEvent);

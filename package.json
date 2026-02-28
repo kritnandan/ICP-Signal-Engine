@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
+    "apify-client": "^2.22.2",
     "axios": "^1.7.9",
     "cheerio": "^1.0.0",
     "commander": "^13.1.0",

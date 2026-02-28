@@ -15,6 +15,8 @@ function splitEnv(key: string, separator = ","): string[] {
 export function loadConfig(): AppConfig {
   return {
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+    apifyApiToken: process.env.APIFY_API_TOKEN || "",
+    apolloApiKey: process.env.APOLLO_API_KEY || "",
     outputDir: process.env.OUTPUT_DIR || "./output",
     logLevel: process.env.LOG_LEVEL || "info",
     cronSchedule: process.env.CRON_SCHEDULE || "0 */4 * * *",
@@ -36,8 +38,9 @@ export function loadConfig(): AppConfig {
     },
     collectors: {
       linkedin: {
-        enabled: !!process.env.LINKEDIN_ACCESS_TOKEN,
+        enabled: !!process.env.LINKEDIN_ACCESS_TOKEN || !!process.env.APIFY_API_TOKEN,
         accessToken: process.env.LINKEDIN_ACCESS_TOKEN,
+        apifyActorId: process.env.APIFY_ACTOR_ID || "anchor/linkedin-profile-scraper",
         companyIds: splitEnv("LINKEDIN_COMPANY_IDS"),
         keywords: splitEnv("LINKEDIN_KEYWORDS"),
       },

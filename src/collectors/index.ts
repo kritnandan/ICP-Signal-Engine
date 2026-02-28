@@ -9,7 +9,7 @@ export function createCollectors(config: AppConfig): Collector[] {
   const collectors: Collector[] = [];
 
   if (config.collectors.linkedin.enabled) {
-    collectors.push(new LinkedInCollector(config.collectors.linkedin));
+    collectors.push(new LinkedInCollector(config));
   }
   if (config.collectors.twitter.enabled) {
     collectors.push(new TwitterCollector(config.collectors.twitter));

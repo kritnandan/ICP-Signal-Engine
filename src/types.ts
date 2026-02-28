@@ -199,6 +199,13 @@ export const BuyingSignalEventSchema = z.object({
   }),
 });
 
+export interface Contact {
+  name: string;
+  title: string;
+  email: string;
+  linkedinUrl?: string;
+}
+
 // ── Enriched Signal Event (superset of BuyingSignalEvent) ──
 
 export interface EnrichedSignalEvent extends BuyingSignalEvent {
@@ -208,6 +215,7 @@ export interface EnrichedSignalEvent extends BuyingSignalEvent {
     relatedSignals?: string[];
     reflectionNotes?: string;
     agentConfidenceAdjustment?: number;
+    contacts?: Contact[];
   };
 }
 
@@ -388,6 +396,8 @@ export interface AgentConfig {
 
 export interface AppConfig {
   anthropicApiKey: string;
+  apifyApiToken: string;
+  apolloApiKey: string;
   outputDir: string;
   logLevel: string;
   cronSchedule: string;
@@ -407,6 +417,7 @@ export interface AppConfig {
 export interface LinkedInConfig {
   enabled: boolean;
   accessToken?: string;
+  apifyActorId?: string;
   companyIds: string[];
   keywords: string[];
 }
