@@ -1,3 +1,5 @@
+import { writeFileSync, rmSync, mkdirSync } from "fs";
+import { join } from "path";
 import type {
   AppConfig,
   Collector,
@@ -61,6 +63,17 @@ export class Pipeline {
     // ── Step 1: Collect raw events ──
     const rawEvents = await this.collectAll();
     logger.info(`Collected ${rawEvents.length} raw events`);
+
+    const rawDir = join(this.config.outputDir, "raw");
+    mkdirSync(rawDir, { recursive: true });
+    const tempRawFile = join(rawDir, "temp_raw_events.json");
+
+    try {
+      writeFileSync(tempRawFile, JSON.stringify(rawEvents, null, 2), "utf-8");
+      logger.info(`Temporarily saved raw collected data to ${tempRawFile}`);
+    } catch (e) {
+      logger.error(`Failed to save temp raw events: ${e}`);
+    }
 
     // Apply per-run cap
     const capped = rawEvents.slice(0, this.config.maxEventsPerRun);
@@ -142,6 +155,14 @@ export class Pipeline {
       eventsBySource: this.countBy(signalEvents, (e) => e.source.platform),
       eventsByCategory: this.countBy(signalEvents, (e) => e.signal.category),
     };
+
+    // ── Step 5: Cleanup temporary raw data ──
+    try {
+      rmSync(tempRawFile, { force: true });
+      logger.info(`Successfully deleted temporary raw collector data from ${tempRawFile}`);
+    } catch (e) {
+      logger.error(`Failed to delete temporary raw file: ${e}`);
+    }
 
     logger.info(
       `Pipeline run ${runId} completed: ${result.totalSignals} signals from ${result.totalCollected} collected`

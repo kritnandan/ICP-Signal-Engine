@@ -18,7 +18,9 @@
     "schedule": "tsx src/cli.ts schedule",
     "chat": "tsx src/cli.ts chat",
     "ask": "tsx src/cli.ts ask",
-    "setup": "tsx src/cli.ts setup"
+    "setup": "tsx src/cli.ts setup",
+    "export": "tsx src/cli.ts export",
+    "dashboard": "tsx src/cli.ts dashboard"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -29,6 +31,7 @@
     "dotenv": "^16.5.0",
     "rss-parser": "^3.13.0",
     "winston": "^3.17.0",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.2"
   },
   "devDependencies": {

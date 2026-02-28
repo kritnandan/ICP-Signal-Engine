@@ -193,4 +193,53 @@ program
     await wizard.run();
   });
 
+program
+  .command("export")
+  .description("Export the latest classified signals to an Excel file")
+  .option("-o, --output <path>", "Output file path (default: output/signals_report.xlsx)")
+  .action(async (opts: { output?: string }) => {
+    const config = loadConfig();
+    const { ExcelExporter } = await import("./output/excel.js");
+    const exporter = new ExcelExporter(config.outputDir);
+    try {
+      exporter.exportToExcel(opts.output);
+    } catch (e) {
+      logger.error("Export failed");
+      process.exit(1);
+    }
+  });
+
+program
+  .command("dashboard")
+  .description("Generate a daily summary dashboard of latest signals")
+  .action(async () => {
+    const config = loadConfig();
+
+    if (!config.anthropicApiKey) {
+      logger.error("ANTHROPIC_API_KEY required for dashboard mode");
+      process.exit(1);
+    }
+
+    logger.info("Generating daily dashboard via AI analysis...");
+    const { OrchestratorAgent } = await import("./agents/orchestrator.js");
+    const { createToolRegistry } = await import("./tools/tool-registry.js");
+    const { registerAnalysisTools } = await import("./tools/analysis-tools.js");
+    const { registerMemoryTools } = await import("./tools/memory-tools.js");
+    const { registerOutputTools } = await import("./tools/output-tools.js");
+
+    const toolRegistry = createToolRegistry();
+    registerAnalysisTools(toolRegistry, config);
+    registerMemoryTools(toolRegistry, config.agent.memoryDir);
+    registerOutputTools(toolRegistry, config);
+
+    const orchestrator = new OrchestratorAgent(config, toolRegistry);
+
+    // Explicit predefined query
+    const query = "Analyze the latest collected signals and create a markdown daily summary dashboard of high-confidence buying signals. Group them by category and highlight the most promising companies.";
+    const result = await orchestrator.ask(query);
+
+    const { formatAgentResult } = await import("./conversation/message-formatter.js");
+    console.log(formatAgentResult(result));
+  });
+
 program.parse();
