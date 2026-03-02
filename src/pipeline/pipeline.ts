@@ -109,36 +109,36 @@ export class Pipeline {
       const signal = classifications.get(event.id);
       if (!signal) continue;
 
-      // Filter by confidence threshold
+      const buyingEvent: EnrichedSignalEvent = {
+        eventId: event.id,
+        timestamp: new Date().toISOString(),
+        source: {
+          platform: event.source,
+          contentType: event.contentType,
+          url: event.url,
+          author: event.author,
+          authorRole: event.authorRole,
+        },
+        company,
+        signal,
+        rawContent: {
+          title: event.title,
+          body: event.body,
+          publishedAt: event.publishedAt,
+        },
+        pipeline: {
+          collectedAt: event.collectedAt,
+          processedAt: new Date().toISOString(),
+          pipelineVersion: PIPELINE_VERSION,
+        },
+        enrichment: {}
+      };
+
+      // Filter by confidence threshold for Enrichment ONLY
       if (
         signal.isSignal &&
         signal.confidence >= this.config.signalConfidenceThreshold
       ) {
-        const buyingEvent: EnrichedSignalEvent = {
-          eventId: event.id,
-          timestamp: new Date().toISOString(),
-          source: {
-            platform: event.source,
-            contentType: event.contentType,
-            url: event.url,
-            author: event.author,
-            authorRole: event.authorRole,
-          },
-          company,
-          signal,
-          rawContent: {
-            title: event.title,
-            body: event.body,
-            publishedAt: event.publishedAt,
-          },
-          pipeline: {
-            collectedAt: event.collectedAt,
-            processedAt: new Date().toISOString(),
-            pipelineVersion: PIPELINE_VERSION,
-          },
-          enrichment: {}
-        };
-
         // ── Step 4.5: Apollo.io Enrichment ──
         if (this.config.apolloApiKey && signal.confidence >= 0.7) {
           try {
@@ -173,10 +173,10 @@ export class Pipeline {
             logger.error(`Apollo enrichment failed for ${company.companyName}: ${err instanceof Error ? err.message : String(err)}`);
           }
         }
-
-        this.writer.writeEvent(buyingEvent);
-        signalEvents.push(buyingEvent);
       }
+
+      this.writer.writeEvent(buyingEvent);
+      signalEvents.push(buyingEvent);
     }
 
     const outputFile = this.writer.writeBatch(signalEvents, runId);

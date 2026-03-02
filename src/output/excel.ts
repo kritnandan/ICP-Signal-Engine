@@ -12,7 +12,8 @@ export class ExcelExporter {
     }
 
     exportToExcel(outputPath?: string): string {
-        const defaultOutputPath = outputPath || join(this.outputDir, "signals_report.xlsx");
+        const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const defaultOutputPath = outputPath || join(this.outputDir, `signals_report_${timestamp}.xlsx`);
         const latestPath = join(this.outputDir, "latest.json");
 
         try {

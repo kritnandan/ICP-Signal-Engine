@@ -33,7 +33,7 @@ export class LinkedInCollector extends BaseCollector {
     }
 
     const events: RawEvent[] = [];
-    const actorId = this.config.apifyActorId || "anchor/linkedin-profile-scraper";
+    const actorId = this.config.apifyActorId || "curious_coder/linkedin-post-search-scraper";
 
     for (const companyId of this.config.companyIds) {
       try {
