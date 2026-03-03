@@ -1,78 +1,106 @@
 {
-  "name": "Supply Chain & Procurement ICP",
-  "industries": [
-    "Manufacturing",
-    "Retail",
-    "Consumer Goods",
-    "Food & Beverage",
-    "Automotive",
-    "Aerospace & Defense",
-    "Pharmaceuticals",
-    "Healthcare",
-    "Technology",
-    "Logistics & Transportation",
-    "Energy",
-    "Chemicals",
-    "Industrial Equipment"
-  ],
-  "minEmployees": 500,
-  "maxEmployees": 500000,
-  "minRevenue": 100,
-  "geographies": [
-    "United States",
-    "Canada",
-    "United Kingdom",
-    "Germany",
-    "France",
-    "Netherlands",
-    "Australia",
-    "Singapore",
-    "Japan"
-  ],
-  "techStack": [
-    "SAP",
-    "Oracle",
-    "Microsoft Dynamics",
-    "Coupa",
-    "Ariba",
-    "Jaggaer",
-    "Blue Yonder",
-    "Kinaxis",
-    "o9 Solutions",
-    "Manhattan Associates",
-    "Körber",
-    "Descartes",
-    "project44",
-    "FourKites",
-    "Snowflake",
-    "Databricks"
-  ],
-  "targetRoles": [
-    "VP Supply Chain",
-    "VP Procurement",
-    "VP Logistics",
-    "VP Operations",
-    "Chief Supply Chain Officer",
-    "Chief Procurement Officer",
-    "Director of Procurement",
-    "Director of Supply Chain",
-    "Director of Logistics",
-    "Director of Operations",
-    "Head of Sourcing",
-    "Head of Procurement",
-    "Head of Supply Chain",
-    "Supply Chain Manager",
-    "Procurement Manager",
-    "Logistics Manager",
-    "S2P Program Manager",
-    "Digital Transformation Lead"
-  ],
-  "excludeCompanies": [],
-  "customRules": [
-    {
-      "field": "body",
-      "operator": "regex",
-      "value": "(RFP|RFQ|RFI|vendor selection|platform evaluation|system implementation|digital transformation|overhaul|moderniz|re-platform)"
-    }
-  ]
+  "name": "US Mid-Market Supply Chain Intent ICP",
+  "companyCriteria": {
+    "industries": [
+      "Manufacturing",
+      "Consumer Goods",
+      "Food & Beverage",
+      "Industrial Equipment",
+      "Logistics & Transportation"
+    ],
+    "geographies": [
+      "United States"
+    ],
+    "minEmployees": 50,
+    "maxEmployees": 300,
+    "maxRevenueUSD": 15000000
+  },
+  "roleClassification": {
+    "decisionMakers": [
+      "Chief Supply Chain Officer",
+      "Chief Procurement Officer",
+      "VP Supply Chain",
+      "VP Procurement",
+      "VP Operations",
+      "Director of Supply Chain",
+      "Director of Procurement",
+      "Director of Operations",
+      "Head of Supply Chain",
+      "Head of Procurement"
+    ],
+    "influencers": [
+      "Supply Chain Manager",
+      "Procurement Manager",
+      "Operations Manager",
+      "Logistics Manager",
+      "Sourcing Manager",
+      "S2P Program Manager",
+      "Digital Transformation Lead"
+    ],
+    "excludeTitles": [
+      "Intern",
+      "Assistant",
+      "Coordinator",
+      "Analyst",
+      "Consultant (External)"
+    ]
+  },
+  "roleScoring": {
+    "C-Level": 10,
+    "VP": 9,
+    "Director": 8,
+    "Head": 8,
+    "Senior Manager": 8,
+    "Manager": 7,
+    "Other": 5
+  },
+  "intentSignals": {
+    "highIntent": [
+      "RFP",
+      "RFQ",
+      "RFI",
+      "vendor selection",
+      "platform evaluation",
+      "system implementation",
+      "ERP migration",
+      "WMS implementation",
+      "TMS implementation",
+      "looking for a solution",
+      "selecting a new vendor"
+    ],
+    "mediumIntent": [
+      "digital transformation",
+      "modernization",
+      "process improvement",
+      "supply chain upgrade",
+      "re-platform",
+      "automation initiative"
+    ]
+  },
+  "engagementThreshold": {
+    "minLikes": 10,
+    "minComments": 2
+  },
+  "postCriteria": {
+    "timelineDays": 7,
+    "minIntentScore": 6
+  },
+  "scoringModel": {
+    "weights": {
+      "roleScore": 0.4,
+      "intentScore": 0.4,
+      "companyFitScore": 0.2
+    },
+    "minimumQualifiedScore": 7
+  },
+  "enrichment": {
+    "provider": "Apollo",
+    "requireVerifiedEmail": true,
+    "minEmailConfidence": 90
+  },
+  "outreachRules": {
+    "requireUnsubscribe": true,
+    "regionCompliance": "CAN-SPAM",
+    "avoidHardReferenceToPost": true
+  }
 }

@@ -40,7 +40,7 @@ export function loadConfig(): AppConfig {
       linkedin: {
         enabled: !!process.env.LINKEDIN_ACCESS_TOKEN || !!process.env.APIFY_API_TOKEN,
         accessToken: process.env.LINKEDIN_ACCESS_TOKEN,
-        apifyActorId: process.env.APIFY_ACTOR_ID || "anchor/linkedin-profile-scraper",
+        apifyActorId: process.env.APIFY_ACTOR_ID || "apimaestro/linkedin-posts-search-scraper-no-cookies",
         companyIds: splitEnv("LINKEDIN_COMPANY_IDS"),
         keywords: splitEnv("LINKEDIN_KEYWORDS"),
       },
