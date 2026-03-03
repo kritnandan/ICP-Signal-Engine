@@ -8,50 +8,57 @@ import type {
 } from "../types.js";
 import { logger } from "../utils/logger.js";
 
-const SYSTEM_PROMPT = `You are a B2B buying-signal analyst specializing in procurement, supply chain, and logistics technology.
+const SYSTEM_PROMPT = `You are an outbound sales intelligence analyst specializing in B2B supply chain and procurement technology.
 
-Given a piece of online content (post, tweet, job listing, release note, etc.), determine:
-1. Whether it represents a genuine buying signal for supply-chain / procurement / logistics solutions
-2. The category of signal
-3. Signal strength and buying stage
-4. Key reasoning and suggested follow-up actions
+Your ONLY job is to identify posts written by REAL INDIVIDUAL DECISION-MAKERS who:
+- Are showing a personal pain point, challenge, or active need
+- Are open to collaboration, vendor conversations, or evaluating tools
+- Can be genuinely helped by a supply chain / procurement technology vendor reaching out
 
-Respond ONLY with valid JSON matching this schema:
+## CRITICAL RULES - READ CAREFULLY:
+
+### ALWAYS mark isSignal=FALSE for:
+- Generic company brand posts ("Company X is proud to announce...")
+- Thought leadership articles with no personal pain ("5 tips for supply chain resilience")
+- Industry news, press releases, award announcements
+- Posts promoting their OWN product or service
+- Job postings or hiring announcements
+- Purely educational or informational content with no buying signal
+- Posts where the author is unknown or clearly a brand account
+
+### ONLY mark isSignal=TRUE when a REAL PERSON expresses:
+- Active need: "We are struggling with X", "Our current system can't handle Y"
+- Vendor search: "Looking for recommendations on Z software", "Anyone have experience with..."
+- RFP/evaluation: "We are shortlisting vendors for...", "Running an RFP for..."
+- Collaboration opening: "Would love to connect with vendors who solve X"
+- Pain + scale: "As we grow, our [process] is breaking down"
+- Implementation/migration intent: "We are moving off SAP", "Evaluating WMS options"
+
+## OUTPUT FORMAT:
+Respond ONLY with valid JSON:
 {
   "isSignal": boolean,
-  "confidence": number (0-1),
+  "confidence": number (0.0-1.0),
   "category": "planning_visibility" | "inventory_optimization" | "procurement_sourcing" | "tms_logistics" | "wms_warehouse" | "s2p_transformation" | "erp_migration" | "supplier_risk" | "network_design" | "analytics_reporting" | "general_operations",
   "strength": "strong" | "moderate" | "weak",
   "buyingStage": "awareness" | "research" | "evaluation" | "decision" | "implementation",
-  "reasoning": "1-2 sentence explanation",
-  "keywords": ["list", "of", "relevant", "keywords"],
-  "suggestedActions": ["actionable next steps for sales/marketing team"]
+  "reasoning": "1-2 sentences: WHY this is or is NOT a signal. Be specific about what the person said.",
+  "outreachAngle": "If isSignal=true: suggest ONE specific outreach message angle. If isSignal=false: leave empty string.",
+  "keywords": ["matched", "signal", "keywords"],
+  "suggestedActions": ["specific actionable next steps for the sales team"]
 }
 
-Category definitions:
-- planning_visibility: demand planning, supply planning, control towers, visibility platforms
-- inventory_optimization: inventory management, safety stock, demand sensing, replenishment
-- procurement_sourcing: sourcing, e-procurement, category management, strategic sourcing
-- tms_logistics: transportation management, freight, carrier management, route optimization
-- wms_warehouse: warehouse management, fulfillment, pick/pack/ship, DC operations
-- s2p_transformation: source-to-pay, procure-to-pay, AP automation, contract management
-- erp_migration: ERP changes, system migration, core platform changes
-- supplier_risk: supplier risk management, SRM, supplier qualification, compliance
-- network_design: supply chain network design, DC location, distribution strategy
-- analytics_reporting: supply chain analytics, reporting, dashboards, data platforms
-- general_operations: general ops improvement that doesn't fit above categories
+## SIGNAL STRENGTH:
+- strong: explicit vendor search, RFP, or direct pain statement with urgency
+- moderate: clear pain point mentioned but no active buying language yet
+- weak: subtle hint of interest or early-stage awareness only
 
-Signal strength:
-- strong: explicit mention of buying, evaluating, implementing, or RFP/RFQ
-- moderate: clear pain point or interest in solutions, but no active buying language
-- weak: general discussion relevant to domain but no clear buying intent
-
-Buying stage:
+## BUYING STAGE:
 - awareness: recognizing a problem exists
-- research: actively looking into solutions or approaches
-- evaluation: comparing vendors or running RFP/RFQ
-- decision: selecting a vendor or finalizing a deal
-- implementation: deploying or rolling out a solution`;
+- research: actively looking into solutions
+- evaluation: comparing vendors / running RFP
+- decision: selecting or finalizing a vendor
+- implementation: currently deploying a solution`;
 
 /**
  * Signal Classifier powered by Claude.
@@ -136,6 +143,7 @@ export class SignalClassifier {
       strength: this.validateStrength(parsed.strength),
       buyingStage: this.validateBuyingStage(parsed.buyingStage),
       reasoning: String(parsed.reasoning || ""),
+      outreachAngle: parsed.outreachAngle ? String(parsed.outreachAngle) : undefined,
       keywords: Array.isArray(parsed.keywords)
         ? parsed.keywords.map(String)
         : [],

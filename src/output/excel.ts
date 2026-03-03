@@ -47,8 +47,11 @@ export class ExcelExporter {
                     "Strength": e.signal.strength,
                     "Buying Stage": e.signal.buyingStage,
                     "Apollo Contacts": contactsStr,
+                    "Author": e.source.author || "",
+                    "Author Role": e.source.authorRole || "",
                     "Snippet": e.rawContent.body.substring(0, 500) + (e.rawContent.body.length > 500 ? "..." : ""),
                     "Reasoning": e.signal.reasoning,
+                    "Outreach Angle": (e.signal as any).outreachAngle || "",
                     "Keywords": e.signal.keywords?.join(", ") || "",
                     "Suggested Actions": e.signal.suggestedActions?.join("; ") || ""
                 };

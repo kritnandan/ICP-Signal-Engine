@@ -104,6 +104,7 @@ export interface SignalClassification {
   strength: SignalStrength;
   buyingStage: BuyingStage;
   reasoning: string;
+  outreachAngle?: string; // NEW: suggested outreach message angle
   keywords: string[];
   suggestedActions: string[];
 }
@@ -184,6 +185,7 @@ export const BuyingSignalEventSchema = z.object({
       "implementation",
     ]),
     reasoning: z.string(),
+    outreachAngle: z.string().optional(),
     keywords: z.array(z.string()),
     suggestedActions: z.array(z.string()),
   }),
