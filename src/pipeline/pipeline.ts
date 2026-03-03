@@ -1,4 +1,4 @@
-import { writeFileSync, rmSync, mkdirSync } from "fs";
+import { writeFileSync, rmSync, mkdirSync, readFileSync } from "fs";
 import axios from "axios";
 import { join } from "path";
 import type {
@@ -85,8 +85,22 @@ export class Pipeline {
       );
     }
 
+    // ── Step 1b: Date freshness filter ──
+    const timelineDays = this.getTimelineDays();
+    const cutoffMs = Date.now() - timelineDays * 24 * 60 * 60 * 1000;
+    const fresh = capped.filter((event) => {
+      if (!event.publishedAt) return true; // no date = keep (can't filter)
+      const eventDate = new Date(event.publishedAt).getTime();
+      return !isNaN(eventDate) && eventDate >= cutoffMs;
+    });
+    const staleCount = capped.length - fresh.length;
+    if (staleCount > 0) {
+      logger.info(`Dropped ${staleCount} events older than ${timelineDays} days`);
+    }
+    logger.info(`${fresh.length} events passed freshness filter (last ${timelineDays} days)`);
+
     // ── Step 2: ICP matching ──
-    const withICP = capped.map((event) => ({
+    const withICP = fresh.map((event) => ({
       event,
       company: this.icpMatcher.match(event),
     }));
@@ -94,7 +108,7 @@ export class Pipeline {
     // Filter out events with very low ICP score
     const icpFiltered = withICP.filter((item) => item.company.matchScore > 0);
     logger.info(
-      `${icpFiltered.length}/${capped.length} events passed ICP filter`
+      `${icpFiltered.length}/${fresh.length} events passed ICP filter`
     );
 
     // ── Step 3: Signal classification ──
@@ -239,5 +253,16 @@ export class Pipeline {
       counts[key] = (counts[key] ?? 0) + 1;
     }
     return counts;
+  }
+
+  private getTimelineDays(): number {
+    try {
+      const raw = readFileSync(this.config.icpConfigPath, "utf-8");
+      const icp = JSON.parse(raw) as Record<string, unknown>;
+      const postCriteria = icp.postCriteria as Record<string, number> | undefined;
+      return postCriteria?.timelineDays ?? 7;
+    } catch {
+      return 7;
+    }
   }
 }
