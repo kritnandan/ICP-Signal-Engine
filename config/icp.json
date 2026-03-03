@@ -78,8 +78,8 @@
     ]
   },
   "engagementThreshold": {
-    "minLikes": 10,
-    "minComments": 2
+    "minLikes": 20,
+    "minComments": 1
   },
   "postCriteria": {
     "timelineDays": 7,
